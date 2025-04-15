@@ -170,7 +170,6 @@ onMounted(() => {
   background-size: 400% 400%;
   background-image: var(--theme-gradient);
   animation: warmGradient 20s ease infinite;
-  padding: 20px;
   font-family: 'CustomFont', sans-serif;
 }
 

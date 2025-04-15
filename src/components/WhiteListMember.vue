@@ -640,7 +640,6 @@ onMounted(() => {
       #ffe6e6
   );
   animation: warmGradient 20s ease infinite;
-  padding: 20px;
   font-family: 'CustomFont', sans-serif;
 }
 
