@@ -338,16 +338,11 @@
 <script setup>
 import {nextTick, onMounted, onUnmounted, reactive, ref, watch} from 'vue';
 import {ElMessage} from 'element-plus';
-import axios from 'axios';
+import request from '../utils/request';
 import {Camera, Close, Loading, Position, Refresh, User, VideoPause, VideoPlay, Warning} from '@element-plus/icons-vue';
 // 导入 skinview3d
 import * as skinview3d from 'skinview3d';
 import SakuraBackground from './common/SakuraBackground.vue'
-
-const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  timeout: 8000
-});
 
 const whitelistData = reactive({});
 const loading = ref(false);
@@ -419,42 +414,39 @@ const initialLoading = ref(true);
 const getWhiteList = (showMessage = false) => {
   loading.value = true;
   Promise.all([
-    http.get('/api/v1/getWhiteList'),
-    http.get('/api/v1/getOnlinePlayer')
+    request.get('/api/v1/getWhiteList'),
+    request.get('/api/v1/getOnlinePlayer')
   ])
       .then(([whitelistRes, onlineRes]) => {
-        if (whitelistRes.data.code === 200) {
-          // 处理白名单数据
-          Object.keys(whitelistData).forEach(key => delete whitelistData[key]);
-          Object.entries(whitelistRes.data.data).forEach(([server, membersStr]) => {
-            const members = membersStr
-                .replace(/^\[|\]$/g, '')
-                .split(',')
-                .map(member => member.trim())
-                .filter(member => member);
-            whitelistData[server] = members;
-          });
-        }
+        // request工具已经处理了响应数据，直接使用res
+        // 处理白名单数据
+        Object.keys(whitelistData).forEach(key => delete whitelistData[key]);
+        Object.entries(whitelistRes).forEach(([server, membersStr]) => {
+          const members = membersStr
+              .replace(/^\[|\]$/g, '')
+              .split(',')
+              .map(member => member.trim())
+              .filter(member => member);
+          whitelistData[server] = members;
+        });
 
         // 处理在线玩家数据
-        if (onlineRes.data.code === 200) {
-          const onlineData = onlineRes.data.data;
-          const onlineSet = new Set();
+        const onlineData = onlineRes;
+        const onlineSet = new Set();
 
-          // 遍历所有服务器的在线玩家
-          Object.entries(onlineData).forEach(([serverName, serverData]) => {
-            if (serverName !== '查询时间' && serverData['在线玩家']) {
-              const players = serverData['在线玩家']
-                  .replace(/^\[|\]$/g, '')
-                  .split(',')
-                  .map(p => p.trim())
-                  .filter(p => p);
-              players.forEach(player => onlineSet.add(player));
-            }
-          });
+        // 遍历所有服务器的在线玩家
+        Object.entries(onlineData).forEach(([serverName, serverData]) => {
+          if (serverName !== '查询时间' && serverData['在线玩家']) {
+            const players = serverData['在线玩家']
+                .replace(/^\[|\]$/g, '')
+                .split(',')
+                .map(p => p.trim())
+                .filter(p => p);
+            players.forEach(player => onlineSet.add(player));
+          }
+        });
 
-          onlinePlayers.value = onlineSet;
-        }
+        onlinePlayers.value = onlineSet;
 
         lastUpdateTime.value = new Date().toLocaleString();
         if (showMessage) {
@@ -474,14 +466,10 @@ const getWhiteList = (showMessage = false) => {
 // 查看员详情
 const checkMemberDetail = (memberId) => {
   loading.value = true;
-  http.get(`/mc/whitelist/check?id=${memberId}`)
+  request.get(`/mc/whitelist/check?id=${memberId}`)
       .then((res) => {
-        if (res.data.code === 200) {
-          memberDetail.value = res.data.data;
-          dialogVisible.value = true;
-        } else {
-          ElMessage.error(res.data.msg || '获取成员详情失败');
-        }
+        memberDetail.value = res;
+        dialogVisible.value = true;
       })
       .catch((error) => {
         console.error('获取成员详情失败：', error);
@@ -502,13 +490,9 @@ const viewQuizDetail = () => {
   quizLoading.value = true;
   quizDialogVisible.value = true;
   quizDetail.value = null;
-  http.get(`/api/v1/getQuizDetail/${quizId}`)
+  request.get(`/api/v1/getQuizDetail/${quizId}`)
       .then((res) => {
-        if (res.data.code === 200) {
-          quizDetail.value = res.data.data;
-        } else {
-          ElMessage.error(res.data.msg || '获取答题详情失败');
-        }
+        quizDetail.value = res;
       })
       .catch((error) => {
         console.error('获取答题详情失败：', error);
@@ -544,18 +528,13 @@ const loadAndRenderSkin = async (username) => {
 
     console.log('Loading skin for:', username);
 
-    const response = await http.get(`/mojang/user/${username}`);
-    console.log('Mojang API response:', response.data);
+    const response = await request.get(`/mojang/user/${username}`);
+    console.log('Mojang API response:', response);
 
-    if (response.data.code === 200) {
-      const skinData = response.data.data;
-      // 将皮肤数据存入缓存
-      skinCache.set(username, skinData);
-      await renderSkin(username, skinData);
-    } else {
-      skinLoadError.value = response.data.msg || '获取皮肤数据失败';
-      throw new Error(response.data.msg || '获取皮肤数据失败');
-    }
+    const skinData = response;
+    // 将皮肤数据存入缓存
+    skinCache.set(username, skinData);
+    await renderSkin(username, skinData);
   } catch (error) {
     console.error('加载皮肤失败：', error);
     skinLoadError.value = '无法加载玩家皮肤';

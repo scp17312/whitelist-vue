@@ -40,8 +40,7 @@
 import {onMounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {CircleCheck, InfoFilled, Loading, Warning} from '@element-plus/icons-vue'
-import axios from 'axios'
-import {addIPToHeaders} from '../utils/ipUtils'
+import request from '../utils/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -60,40 +59,27 @@ const verifyCode = async () => {
   }
 
   try {
-    // 使用封装的IP工具函数获取请求头
-    const headers = await addIPToHeaders({
-      'Content-Type': 'application/json'
-    })
-
-    // 确保API URL使用HTTPS
-    const apiUrl = import.meta.env.VITE_API_URL || ''
-
     // 首先检查是否有问卷题目
     try {
-      const questionsRes = await axios.get(`${apiUrl}/api/v1/getQuestions`, {
-        params: {code: code.value},
-        headers,
-        withCredentials: true
+      const questionsRes = await request.get('/api/v1/getQuestions', {
+        params: {code: code.value}
       })
 
       // 如果有问卷题目且非空，检查是否已完成
-      if (questionsRes.data.code === 200 &&
-          questionsRes.data.data &&
-          Array.isArray(questionsRes.data.data) &&
-          questionsRes.data.data.length > 0) {
+      if (questionsRes &&
+          Array.isArray(questionsRes) &&
+          questionsRes.length > 0) {
 
         console.log('检测到问卷题目，检查是否已完成问卷')
 
         // 检查问卷状态
         try {
-          const quizStatusRes = await axios.get(`${apiUrl}/api/v1/checkQuizStatus`, {
-            params: {code},
-            headers,
-            withCredentials: true
+          const quizStatusRes = await request.get('/api/v1/checkQuizStatus', {
+            params: {code}
           })
 
           // 如果状态检查返回未完成问卷，重定向到问卷页面
-          if (quizStatusRes.data.code === 200 && quizStatusRes.data.msg === "未完成问卷") {
+          if (quizStatusRes && quizStatusRes.msg === "未完成问卷") {
             console.log('问卷未完成，重定向到问卷页面')
             redirectToQuiz.value = true
             loading.value = false
@@ -110,35 +96,23 @@ const verifyCode = async () => {
       }
 
       // 没有问卷或已完成问卷，继续验证
-      const res = await axios.get(`${apiUrl}/mc/whitelist/verify`, {
-        params: {code},
-        headers,
-        withCredentials: true
+      const res = await request.get('/mc/whitelist/verify', {
+        params: {code}
       })
 
-      if (res.data.code === 200) {
-        success.value = true
-        successMessage.value = res.data.msg || '验证成功,请等待管理员审核!'
-      } else {
-        error.value = res.data.msg || '验证失败'
-      }
+      success.value = true
+      successMessage.value = res.msg || '验证成功,请等待管理员审核!'
     } catch (err) {
       console.warn('获取问卷题目失败，尝试直接验证:', err)
 
       // 获取问卷题目失败，继续验证流程
       try {
-        const res = await axios.get(`${apiUrl}/mc/whitelist/verify`, {
-          params: {code},
-          headers,
-          withCredentials: true
+        const res = await request.get('/mc/whitelist/verify', {
+          params: {code}
         })
 
-        if (res.data.code === 200) {
-          success.value = true
-          successMessage.value = res.data.msg || '验证成功,请等待管理员审核!'
-        } else {
-          error.value = res.data.msg || '验证失败'
-        }
+        success.value = true
+        successMessage.value = res.msg || '验证成功,请等待管理员审核!'
       } catch (verifyErr) {
         console.error('验证请求失败:', verifyErr)
         if (verifyErr.message && verifyErr.message.includes('Network Error')) {

@@ -99,17 +99,12 @@
 import {onMounted, ref} from 'vue';
 import {useRoute, useRouter} from 'vue-router';
 import {ElMessage} from 'element-plus';
-import axios from 'axios';
+import request from '../utils/request';
 import {Back, CopyDocument, Loading} from '@element-plus/icons-vue';
 import SakuraBackground from './common/SakuraBackground.vue';
 
 const route = useRoute();
 const router = useRouter();
-
-const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  timeout: 8000
-});
 
 const loading = ref(false);
 const servers = ref([]);
@@ -140,13 +135,9 @@ const fetchServerInfo = async () => {
       return;
     }
 
-    const response = await http.get(`/server/serverlist/getServerInfoByGameId/${gameId}`);
+    const response = await request.get(`/server/serverlist/getServerInfoByGameId/${gameId}`);
 
-    if (response.data.code === 200) {
-      servers.value = response.data.data;
-    } else {
-      ElMessage.error(response.data.msg || '获取服务器信息失败');
-    }
+    servers.value = response;
   } catch (error) {
     console.error('获取服务器信息失败：', error);
     ElMessage.error('获取服务器信息失败，请检查网络或联系管理员');

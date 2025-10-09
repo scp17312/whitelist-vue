@@ -84,9 +84,8 @@
 import {computed, onMounted, ref} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {Loading, Warning} from '@element-plus/icons-vue'
-import axios from 'axios'
+import request from '../utils/request'
 import {ElMessage} from 'element-plus'
-import {addIPToHeaders} from '../utils/ipUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -126,49 +125,33 @@ const fetchQuestions = async () => {
   }
 
   try {
-    const apiUrl = import.meta.env.VITE_API_URL
-    const res = await axios.get(`${apiUrl}/api/v1/getQuestions`, {
-      params: {code: code.value},
-      withCredentials: true
+    const res = await request.get('/api/v1/getQuestions', {
+      params: {code: code.value}
     })
 
-    if (res.data.code === 200) {
-      questions.value = res.data.data || []
+    questions.value = res || []
 
-      // 如果没有问题，直接跳转到验证页面
-      if (!questions.value.length) {
-        console.log('没有问卷题目，直接进入验证页面')
-        router.push({
-          path: '/verify',
-          query: {code: code.value}
-        })
-        return
-      }
-
-      // 初始化答案对象
-      questions.value.forEach(q => {
-        if (q.questionType === 2) { // 多选题初始化为数组
-          answers.value[q.id] = []
-        } else {
-          answers.value[q.id] = ''
-        }
+    // 如果没有问题，直接跳转到验证页面
+    if (!questions.value.length) {
+      console.log('没有问卷题目，直接进入验证页面')
+      router.push({
+        path: '/verify',
+        query: {code: code.value}
       })
-
-      // 按sortOrder排序
-      questions.value.sort((a, b) => a.sortOrder - b.sortOrder)
-    } else {
-      // 如果返回错误，检查是否是因为没有题目
-      if (res.data.msg && res.data.msg.includes('没有问卷题目')) {
-        console.log('API返回无问卷题目，直接进入验证页面')
-        router.push({
-          path: '/verify',
-          query: {code: code.value}
-        })
-        return
-      }
-
-      error.value = res.data.msg || '获取题目失败'
+      return
     }
+
+    // 初始化答案对象
+    questions.value.forEach(q => {
+      if (q.questionType === 2) { // 多选题初始化为数组
+        answers.value[q.id] = []
+      } else {
+        answers.value[q.id] = ''
+      }
+    })
+
+    // 按sortOrder排序
+    questions.value.sort((a, b) => a.sortOrder - b.sortOrder)
   } catch (err) {
     console.error('获取题目失败:', err)
     if (err.response && err.response.status === 404) {
@@ -194,13 +177,7 @@ const submitAnswers = async () => {
 
   submitting.value = true
 
-
   try {
-    // 使用封装的IP工具函数获取请求头
-    const headers = await addIPToHeaders()
-
-    const apiUrl = import.meta.env.VITE_API_URL
-
     // 转换答案格式
     const formattedAnswers = Object.entries(answers.value).map(([questionId, answer]) => {
       const question = questions.value.find(q => q.id === parseInt(questionId))
@@ -211,23 +188,16 @@ const submitAnswers = async () => {
       }
     })
 
-    const res = await axios.post(`${apiUrl}/api/v1/submitQuiz`, {
+    const res = await request.post('/api/v1/submitQuiz', {
       code: code.value,
       answers: formattedAnswers
-    }, {
-      headers,
-      withCredentials: true
     })
 
-    if (res.data.code === 200) {
-      // 提交成功，进入验证页面
-      router.push({
-        path: '/verify',
-        query: {code: code.value}
-      })
-    } else {
-      ElMessage.error(res.data.msg || '提交答案失败')
-    }
+    // 提交成功，进入验证页面
+    router.push({
+      path: '/verify',
+      query: {code: code.value}
+    })
   } catch (err) {
     console.error('提交答案失败:', err)
 

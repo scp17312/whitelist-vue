@@ -66,48 +66,41 @@
 <script setup>
 import {onMounted, ref} from 'vue'
 import {ElMessage} from 'element-plus'
-import axios from 'axios'
+import request from '../utils/request'
 import {Back, Loading, Monitor, Refresh, Timer, User} from '@element-plus/icons-vue'
 
 const loading = ref(false)
 const servers = ref([])
 const queryTime = ref('-')
 
-const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  timeout: 8000
-})
-
 const refreshStatus = async () => {
   loading.value = true
   try {
-    const res = await http.get('/api/v1/getOnlinePlayer')
-    if (res.data.code === 200) {
-      const data = res.data.data
-      servers.value = []
+    const res = await request.get('/api/v1/getOnlinePlayer')
+    const data = res
+    servers.value = []
 
-      Object.entries(data).forEach(([serverName, serverData]) => {
-        if (serverName === '查询时间') {
-          queryTime.value = serverData
-          return
-        }
+    Object.entries(data).forEach(([serverName, serverData]) => {
+      if (serverName === '查询时间') {
+        queryTime.value = serverData
+        return
+      }
 
-        let players = []
-        const playersStr = serverData['在线玩家']
-        if (playersStr) {
-          players = playersStr.replace(/^\[|\]$/g, '').split(',')
-            .map(p => p.trim())
-            .filter(p => p)
-        }
+      let players = []
+      const playersStr = serverData['在线玩家']
+      if (playersStr) {
+        players = playersStr.replace(/^\[|\]$/g, '').split(',')
+          .map(p => p.trim())
+          .filter(p => p)
+      }
 
-        servers.value.push({
-          name: serverName,
-          playerCount: serverData['在线人数'],
-          players: players
-        })
+      servers.value.push({
+        name: serverName,
+        playerCount: serverData['在线人数'],
+        players: players
       })
-      ElMessage.success('刷新成功')
-    }
+    })
+    ElMessage.success('刷新成功')
   } catch (error) {
     console.error('获取服务器状态失败：', error)
     ElMessage.error('获取服务器状态失败')

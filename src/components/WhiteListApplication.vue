@@ -143,16 +143,10 @@
 <script setup>
 import {computed, onMounted, onUnmounted, reactive, ref} from 'vue';
 import {ElMessage} from 'element-plus';
-import axios from 'axios';
+import request from '../utils/request';
 import {ArrowRight, Loading, Refresh, User} from '@element-plus/icons-vue'
 import {debounce} from 'lodash-es';
 import SakuraBackground from './common/SakuraBackground.vue'
-import {addIPToHeaders} from '../utils/ipUtils'
-
-const http = axios.create({
-  baseURL: import.meta.env.VITE_API_URL, // 使用环境变量
-  timeout: 8000
-});
 
 const form = reactive({
   userName: '',
@@ -188,17 +182,10 @@ const submitForm = async () => {
     fullscreenLoading.value = true;
 
     try {
-      // 使用封装的IP工具函数获取请求头
-      const headers = await addIPToHeaders();
+      // 使用带鉴权的request工具发送表单请求
+      const res = await request.post('/mc/whitelist/apply', form);
       
-      // 发送表单请求
-      const res = await http.post('/mc/whitelist/apply', form, {headers});
-      
-      if (res.data.code === 200) {
-        ElMessage.success(res.data.msg);
-      } else {
-        ElMessage.error(res.data.msg || '未知错误，请联系管理员');
-      }
+      ElMessage.success(res.msg || '申请提交成功');
     } catch (error) {
       console.error('提交表单请求出错：', error);
       ElMessage.error('提交表单时发生错误，请检查网络或联系管理员');
@@ -210,45 +197,42 @@ const submitForm = async () => {
 
 const getOnlinePlayer = (reflash) => {
   loading = true;
-  http.get('/api/v1/getOnlinePlayer').then((res) => {
-    if (res.data.code === 200) {
-      const data = res.data.data;
-      // 重置服务器列表
-      serverStatus.servers = [];
+  request.get('/api/v1/getOnlinePlayer').then((res) => {
+    // request工具已经处理了响应数据，直接使用res
+    const data = res;
+    // 重置服务器列表
+    serverStatus.servers = [];
 
-      // 遍历所有服务器数据
-      Object.entries(data).forEach(([serverName, serverData]) => {
-        // 跳过查询时间字段
-        if (serverName === '查询时间') {
-          serverStatus.queryTime = serverData;
-          return;
-        }
-
-        // 处理服务器数据
-        try {
-          // 处理在线玩家字符串
-          let players = [];
-          const playersStr = serverData['在线玩家'];
-          if (playersStr) {
-            players = playersStr.replace(/^\[|\]$/g, '').split(',')
-                .map(p => p.trim())
-                .filter(p => p);
-          }
-
-          serverStatus.servers.push({
-            name: serverName,
-            playerCount: serverData['在线人数'],
-            players: players
-          });
-        } catch (e) {
-          console.error(`处理服务器 ${serverName} 数据失败:`, e);
-        }
-      });
-      if (reflash) {
-        ElMessage.success('刷新成功！');
+    // 遍历所有服务器数据
+    Object.entries(data).forEach(([serverName, serverData]) => {
+      // 跳过查询时间字段
+      if (serverName === '查询时间') {
+        serverStatus.queryTime = serverData;
+        return;
       }
-    } else {
-      ElMessage.error(res.data.msg || '获取服务器状态失败');
+
+      // 处理服务器数据
+      try {
+        // 处理在线玩家字符串
+        let players = [];
+        const playersStr = serverData['在线玩家'];
+        if (playersStr) {
+          players = playersStr.replace(/^\[|\]$/g, '').split(',')
+              .map(p => p.trim())
+              .filter(p => p);
+        }
+
+        serverStatus.servers.push({
+          name: serverName,
+          playerCount: serverData['在线人数'],
+          players: players
+        });
+      } catch (e) {
+        console.error(`处理服务器 ${serverName} 数据失败:`, e);
+      }
+    });
+    if (reflash) {
+      ElMessage.success('刷新成功！');
     }
     loading = false;
     initialLoading.value = false; // 设置初始加载状态为 false
