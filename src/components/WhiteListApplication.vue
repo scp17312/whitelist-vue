@@ -111,6 +111,18 @@
         欢迎加入我们的服务器！请填写以下信息完成白名单申请。
       </div>
 
+      <div class="view-more-container" style="margin-bottom: 10px;">
+        <el-button
+            class="view-more-btn"
+            type="primary"
+            text
+            @click="$router.push('/server-status2')"
+        >
+          <el-icon><ArrowRight /></el-icon>
+          查看服务器状态（新）
+        </el-button>
+      </div>
+
       <el-form :model="form" class="animated-form" label-width="auto">
         <el-form-item label="ID：">
           <el-input v-model="form.userName" placeholder="请输入游戏名称"></el-input>
