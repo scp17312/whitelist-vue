@@ -5,65 +5,76 @@
 
 /**
  * 主要IP获取接口
- * @returns {Promise<Object>} 包含IP信息的对象
+ * @returns {Promise<Object|null>} 包含IP信息的对象，失败返回null
  */
 const getIpFromPrimarySource = async () => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-  try {
-    const response = await fetch('https://ip.useragentinfo.com/json', {
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return await response.json();
-  } catch (error) {
-    clearTimeout(timeoutId);
-    console.warn('主要IP获取接口失败，尝试备用接口:', error);
-    return getIpFromBackupSource();
-  }
+    try {
+        const response = await fetch('https://ip.useragentinfo.com/json', {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return await response.json();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        console.warn('主要IP获取接口失败，尝试备用接口:', error);
+        // 捕获所有可能的异常，确保不会向上抛出
+        try {
+            return await getIpFromBackupSource();
+        } catch (e) {
+            return null;
+        }
+    }
 };
 
 /**
  * 备用IP获取接口1
- * @returns {Promise<Object>} 包含IP信息的对象
+ * @returns {Promise<Object|null>} 包含IP信息的对象，失败返回null
  */
 const getIpFromBackupSource = async () => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-  try {
-    const response = await fetch('https://ipinfo.io/json', {
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return await response.json();
-  } catch (error) {
-    clearTimeout(timeoutId);
-    console.warn('备用IP获取接口1失败，尝试备用接口2:', error);
-    return getIpFromBackupSource2();
-  }
+    try {
+        const response = await fetch('https://ipinfo.io/json', {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return await response.json();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        console.warn('备用IP获取接口1失败，尝试备用接口2:', error);
+        // 捕获所有可能的异常，确保不会向上抛出
+        try {
+            return await getIpFromBackupSource2();
+        } catch (e) {
+            return null;
+        }
+    }
 };
 
 /**
  * 备用IP获取接口2
- * @returns {Promise<Object>} 包含IP信息的对象
+ * @returns {Promise<Object|null>} 包含IP信息的对象，失败返回null
  */
 const getIpFromBackupSource2 = async () => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-  try {
-    const response = await fetch('https://api.ipify.org?format=json', {
-      signal: controller.signal
-    });
-    clearTimeout(timeoutId);
-    return await response.json();
-  } catch (error) {
-    clearTimeout(timeoutId);
-    console.warn('备用IP获取接口2也失败:', error);
-    return {};
-  }
+    try {
+        const response = await fetch('https://api.ipify.org?format=json', {
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return await response.json();
+    } catch (error) {
+        clearTimeout(timeoutId);
+        console.warn('所有IP获取接口均失败，将不添加IP信息:', error);
+        // 最后一个接口也失败，返回null而不是抛出异常
+        return null;
+    }
 };
 
 /**
@@ -72,13 +83,14 @@ const getIpFromBackupSource2 = async () => {
  * @returns {Promise<string|null>} 用户IP地址，如果获取失败返回null
  */
 export const getUserIP = async () => {
-  try {
-    const data = await getIpFromPrimarySource();
-    return data && data.ip ? data.ip : null;
-  } catch (error) {
-    console.error('获取用户IP失败:', error);
-    return null;
-  }
+    try {
+        const data = await getIpFromPrimarySource();
+        return data && data.ip ? data.ip : null;
+    } catch (error) {
+        // 双重保险：即使前面有异常漏网，这里也能捕获
+        console.error('获取用户IP失败:', error);
+        return null;
+    }
 };
 
 /**
@@ -87,20 +99,20 @@ export const getUserIP = async () => {
  * @returns {Promise<Object>} 包含IP信息的请求头对象
  */
 export const getHeadersWithIP = async () => {
-  const headers = {
-    'Content-Type': 'application/json'
-  };
+    const headers = {
+        'Content-Type': 'application/json'
+    };
 
-  try {
-    const ip = await getUserIP();
-    if (ip) {
-      headers['X-Real-IP'] = ip;
+    try {
+        const ip = await getUserIP();
+        if (ip) {
+            headers['X-Real-IP'] = ip;
+        }
+    } catch (error) {
+        // 确保即使出错也不影响请求头的返回
+        console.warn('获取IP失败，将使用默认请求头:', error);
     }
-  } catch (error) {
-    console.warn('获取IP失败，将使用默认请求头:', error);
-  }
-
-  return headers;
+    return headers;
 };
 
 /**
@@ -109,16 +121,16 @@ export const getHeadersWithIP = async () => {
  * @returns {Promise<Object>} 添加了IP信息的新请求头对象
  */
 export const addIPToHeaders = async (existingHeaders = {}) => {
-  const headers = { ...existingHeaders };
-  
-  try {
-    const ip = await getUserIP();
-    if (ip) {
-      headers['X-Real-IP'] = ip;
-    }
-  } catch (error) {
-    console.warn('获取IP失败，将使用原始请求头:', error);
-  }
+    const headers = {...existingHeaders};
 
-  return headers;
+    try {
+        const ip = await getUserIP();
+        if (ip) {
+            headers['X-Real-IP'] = ip;
+        }
+    } catch (error) {
+        // 确保即使出错也不影响请求头的返回
+        console.warn('获取IP失败，将使用原始请求头:', error);
+    }
+    return headers;
 };

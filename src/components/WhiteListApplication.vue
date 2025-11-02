@@ -211,7 +211,7 @@ const getOnlinePlayer = (reflash) => {
   loading = true;
   request.get('/api/v1/getOnlinePlayer').then((res) => {
     // request工具已经处理了响应数据，直接使用res
-    const data = res;
+    const data = res.data;
     // 重置服务器列表
     serverStatus.servers = [];
 

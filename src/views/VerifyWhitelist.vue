@@ -66,9 +66,9 @@ const verifyCode = async () => {
       })
 
       // 如果有问卷题目且非空，检查是否已完成
-      if (questionsRes &&
-          Array.isArray(questionsRes) &&
-          questionsRes.length > 0) {
+      if (questionsRes.data &&
+          Array.isArray(questionsRes.data) &&
+          questionsRes.data.length > 0) {
 
         console.log('检测到问卷题目，检查是否已完成问卷')
 

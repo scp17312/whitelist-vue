@@ -129,7 +129,7 @@ const fetchQuestions = async () => {
       params: {code: code.value}
     })
 
-    questions.value = res || []
+    questions.value = res.data || []
 
     // 如果没有问题，直接跳转到验证页面
     if (!questions.value.length) {

@@ -158,7 +158,7 @@ const fetchServerStatus = async () => {
   try {
     const response = await request.get('/api/v1/getServerStatus');
     // 后端返回为 List<Map<String, Object>>，直接赋值即可
-    servers.value = Array.isArray(response) ? response : [];
+    servers.value = Array.isArray(response.data) ? response.data : [];
   } catch (error) {
     console.error('获取服务器状态失败：', error);
     ElMessage.error('获取服务器状态失败，请稍后重试');

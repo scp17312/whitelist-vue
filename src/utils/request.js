@@ -33,7 +33,7 @@ request.interceptors.request.use(
 request.interceptors.response.use(
     response => {
         const {code, msg, data} = response.data
-        if (code === 200) return data
+        if (code === 200) return response.data
 
         // 处理特定错误码
         switch (code) {
@@ -42,7 +42,6 @@ request.interceptors.response.use(
                 break
             case 401:
                 ElMessage.error('未授权访问')
-                router.push('/login')
                 break
             case 403:
                 ElMessage.error('访问被拒绝')

@@ -137,7 +137,7 @@ const fetchServerInfo = async () => {
 
     const response = await request.get(`/server/serverlist/getServerInfoByGameId/${gameId}`);
 
-    servers.value = response;
+    servers.value = response.data;
   } catch (error) {
     console.error('获取服务器信息失败：', error);
     ElMessage.error('获取服务器信息失败，请检查网络或联系管理员');

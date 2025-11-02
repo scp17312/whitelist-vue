@@ -77,7 +77,7 @@ const refreshStatus = async () => {
   loading.value = true
   try {
     const res = await request.get('/api/v1/getOnlinePlayer')
-    const data = res
+    const data = res.data
     servers.value = []
 
     Object.entries(data).forEach(([serverName, serverData]) => {

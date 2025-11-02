@@ -411,17 +411,18 @@ const currentTheme = ref(localStorage.getItem('theme') || 'default')
 // 添加初始加载状态
 const initialLoading = ref(true);
 
+
 const getWhiteList = (showMessage = false) => {
   loading.value = true;
   Promise.all([
     request.get('/api/v1/getWhiteList'),
     request.get('/api/v1/getOnlinePlayer')
-  ])
-      .then(([whitelistRes, onlineRes]) => {
-        // request工具已经处理了响应数据，直接使用res
+  ]).then(([whitelistRes, onlineRes]) => {
+        const whitelistData_backend = whitelistRes.data;
+        const onlineData = onlineRes.data;
         // 处理白名单数据
         Object.keys(whitelistData).forEach(key => delete whitelistData[key]);
-        Object.entries(whitelistRes).forEach(([server, membersStr]) => {
+        Object.entries(whitelistData_backend).forEach(([server, membersStr]) => {
           const members = membersStr
               .replace(/^\[|\]$/g, '')
               .split(',')
@@ -431,7 +432,6 @@ const getWhiteList = (showMessage = false) => {
         });
 
         // 处理在线玩家数据
-        const onlineData = onlineRes;
         const onlineSet = new Set();
 
         // 遍历所有服务器的在线玩家
@@ -468,7 +468,7 @@ const checkMemberDetail = (memberId) => {
   loading.value = true;
   request.get(`/mc/whitelist/check?id=${memberId}`)
       .then((res) => {
-        memberDetail.value = res;
+        memberDetail.value = res.data;
         dialogVisible.value = true;
       })
       .catch((error) => {
@@ -492,7 +492,7 @@ const viewQuizDetail = () => {
   quizDetail.value = null;
   request.get(`/api/v1/getQuizDetail/${quizId}`)
       .then((res) => {
-        quizDetail.value = res;
+        quizDetail.value = res.data;
       })
       .catch((error) => {
         console.error('获取答题详情失败：', error);
@@ -531,7 +531,7 @@ const loadAndRenderSkin = async (username) => {
     const response = await request.get(`/mojang/user/${username}`);
     console.log('Mojang API response:', response);
 
-    const skinData = response;
+    const skinData = response.data;
     // 将皮肤数据存入缓存
     skinCache.set(username, skinData);
     await renderSkin(username, skinData);
@@ -575,7 +575,7 @@ const renderSkin = async (username, skinData) => {
     });
 
     // 加载皮肤
-    const baseUrl = import.meta.env.VITE_API_URL || 'https://application.shenzhuo.vip';
+    const baseUrl = import.meta.env.VITE_API_URL;
     const skinUrl = `${baseUrl}/mojang/texture?url=${encodeURIComponent(skinData.skin.url)}`;
 
     const loadingPromise = viewer.loadSkin(skinUrl);
